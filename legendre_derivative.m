@@ -2,15 +2,19 @@
 %                        associated Legendre polynomial
 %
 % Computing accurate derivatives of associated Legendre polynomials can 
-% be tricky. Associated Legendre polynomials are usually written as 
-% recurrence relations or with (normalization) factors involving factorials. 
-% A naive implementation will quickly run into the limits of IEEE754 
-% double-precision representation, resulting in NaN/inf or significant loss
-% of precision, already at relatively low degree N. 
+% be tricky. Even in advanced texts, they are usually written as recurrence 
+% relations and/or with (normalization) factors involving factorials. 
 %
+% A naive implementation will therefore quickly run into the limits of 
+% IEEE754 double-precision, resulting in NaN/inf or significant loss of 
+% precision, already at relatively low degree N. 
+% 
 % LEGENDRE_DERIVATIVE is a fully vectorized, numerically stable and
 % robustly validated implementation of the derivative computation. It
 % allows fast and accurate computations of the derivatives for any degree N.
+%
+% LEGENDRE_DERIVATIVE works the same as MATLAB's own LEGENDRE, except it 
+% does not compute the polynomial values, but the values of the derivatives.
 %
 %
 % USAGE: 
@@ -24,9 +28,12 @@
 % ----------------
 %
 %            N : degree of the Legendre polynomial.
-%            X : array of points at which to evaluate the derivative.
-%          Pnm : values of the Legendre polynomial at X; this is computed
-%                automatically when omitted.
+%            X : array of points at which to evaluate the derivatives.
+%          Pnm : values of the Legendre polynomial at X; these are computed
+%                automatically when omitted. Since the derivatives only
+%                depend on the degree/order N,M and the values of the 
+%                polynomials Pnm(x), providing these values if they are 
+%                already computed elsewhere will thus improve performance. 
 % normalization: type of normalization to use. Can be equal to 'unnorm' 
 %                (default), 'norm' (fully normalized) or 'sch' (Schmidt 
 %                semi-normalized). 
@@ -52,14 +59,14 @@ function dPnmdx = legendre_derivative(varargin)
     varargin = varargin(2:end);
     assert(isnumeric(n) && isscalar(n) && isfinite(n) && isreal(n) && round(n)==n && n>0,...
         'legendre_derivative:invalid_n',...
-        'Degree must be a positive integer.');
+        'Degree N must be a positive integer.');
     
     normalization = 'unnorm';
     if ischar(varargin{end})
         normalization = varargin{end}; varargin(end) = []; end  
     assert(any(strcmpi(normalization, {'unnorm','norm','sch'})),...
-        'legendre_derivative:invalid_normalization',...
-        'Unsupported normalization type specified: ''%s''.', normalization);
+        'legendre_derivative:unsupported_normalization',...
+        'Unsupported normalization specified: ''%s''.', normalization);
     
     x = varargin{end};
     varargin(end) = [];
@@ -70,7 +77,7 @@ function dPnmdx = legendre_derivative(varargin)
     end
     assert(size(Pnm,1)==n+1,...
         'legendre_derivative:invalid_Pnm',...
-        'Dimensions of polynomial values disagrees with degree N.');
+        'Dimensions of polynomial values Pnm disagrees with degree N.');
     
     % Initialize some arrays for vectorization
     x   = permute(x, [ndims(x)+1 1:ndims(x)]);
