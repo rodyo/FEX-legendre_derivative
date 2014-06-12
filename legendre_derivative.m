@@ -1,8 +1,17 @@
-% LEGENDRE_DERIVATIVE    Compute derivative of (normalized) associated
-%                        Legendre polynomial
+% LEGENDRE_DERIVATIVE    Compute first derivative of (normalized) 
+%                        associated Legendre polynomial
 %
-% Fully vectorized, numerically stable computation of the derivative of the
-% associated Legendre polynomial of degree N. 
+% Computing accurate derivatives of associated Legendre polynomials can 
+% be tricky. Associated Legendre polynomials are usually written as 
+% recurrence relations or with (normalization) factors involving factorials. 
+% A naive implementation will quickly run into the limits of IEEE754 
+% double-precision representation, resulting in NaN/inf or significant loss
+% of precision, already at relatively low degree N. 
+%
+% LEGENDRE_DERIVATIVE is a fully vectorized, numerically stable and
+% robustly validated implementation of the derivative computation. It
+% allows fast and accurate computations of the derivatives for any degree N.
+%
 %
 % USAGE: 
 % ----------------
@@ -47,19 +56,19 @@ function dPnmdx = legendre_derivative(varargin)
     
     normalization = 'unnorm';
     if ischar(varargin{end})
-        normalization = varargin{end}; varargin = varargin(1:end-1); end  
+        normalization = varargin{end}; varargin(end) = []; end  
     assert(any(strcmpi(normalization, {'unnorm','norm','sch'})),...
         'legendre_derivative:invalid_normalization',...
         'Unsupported normalization type specified: ''%s''.', normalization);
     
-    x = varargin{end};  
-    varargin = varargin(1:end-1);
+    x = varargin{end};
+    varargin(end) = [];
     if isempty(varargin)
         Pnm = legendre(n,x,normalization);
     else
         Pnm = varargin{end};
     end
-    assert(size(Pnm,1)==n,...
+    assert(size(Pnm,1)==n+1,...
         'legendre_derivative:invalid_Pnm',...
         'Dimensions of polynomial values disagrees with degree N.');
     
@@ -69,16 +78,18 @@ function dPnmdx = legendre_derivative(varargin)
     m   = (0:n).';
     sqx = 1 - x.^2;
     
-    % Normalization factors: that was a nice puzzle :) 
+    % Normalization factors: this is actually a nice puzzle :) 
     F = -ones(n+1,1);
     if ~strcmpi(normalization,'unnorm')
         
+        % Factors for both normalizations are the same...
         s = 1/n/(n+1);
-        for m = 0:n
-            F(m+1) = s;
-            s = s * (n-m+1)/(n+m+1)*(n+m)/(n-m);
+        for ii = m.'
+            F(ii+1) = s;
+            s = s * (n-ii+1)/(n+ii+1)*(n+ii)/(n-ii);
         end
         
+        %... save for the first few entries
         switch normalization
             case 'norm'                
                 F(1) = 1/F(2);
@@ -86,6 +97,7 @@ function dPnmdx = legendre_derivative(varargin)
                 F(1) = 1/2/F(2);
                 F(2) = 1/F(1);
         end
+        
         F = sqrt(F);
         
     end
@@ -95,7 +107,7 @@ function dPnmdx = legendre_derivative(varargin)
         Pnm .* bsxfun(@times,m,x) - ...
             bsxfun(@times, F, ...
             [-Pnm(2,idx{:})/n/(n+1)
-            +Pnm(1:end-1,idx{:})]) .*  ...
+             +Pnm(1:end-1,idx{:})]) .*  ...
             bsxfun(@times, (n+m).*(n-m+1), sqrt(sqx)), ...
         sqx);
     
