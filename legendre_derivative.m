@@ -51,9 +51,11 @@ function dPnmdx = legendre_derivative(varargin)
 
     % If you find this work useful, please consider a donation:
     % https://www.paypal.me/RodyO/3.5
+    
+    %% Initialization 
 
     % Parse input, do some checks
-    error(nargchk(2,4,nargin,'struct'));
+    error(nargchk(2, 4, nargin, 'struct'));
 
     n = varargin{1};
     varargin = varargin(2:end);
@@ -73,21 +75,47 @@ function dPnmdx = legendre_derivative(varargin)
 
     x = varargin{end};
     varargin(end) = [];
+    
+    assert(~isempty(x) && isnumeric(x) && ...
+           all(isreal(x(:))) && all(abs(x(~isnan(x(:))))) <= 1,...
+           [mfilename ':invalid_x'],...
+           'X must be real, numeric, nonempty, and in the range (-1,1).');
+    
     if isempty(varargin)
         Pnm = legendre(n,x,normalization);
     else
         Pnm = varargin{end};
     end
+    
     assert(size(Pnm,1)==n+1,...
-          [mfilename  ':invalid_Pnm'],...
+          [mfilename  ':Pnm_dimension_mismatch'],...
           'Dimensions of polynomial values Pnm disagrees with degree N.');
+      
+    % Special case; MATLAB does not normally reshape the Pnm vector 
+    % for size(x) = 1×p  
+    szPnm = size(Pnm);    
+    szX   = size(x);
+    ndx   = ndims(x);
+    assert(isscalar(x) && szPnm(2)==1 || ...
+           isequal(szX(1:find(szX ~= 1, 1, 'last')), szPnm(2:end)) || ...
+           (szX(1) == 1 && ndx == 2 && szX(2) ~= 1 && szPnm(2)==szX(2)),...
+           [mfilename  ':Pnm_dimension_mismatch'],...
+           'Dimensions of polynomial values Pnm disagrees with vector x.');
+              
+       
+    %% Computation 
 
-    % Initialize some arrays for vectorization
-    x   = permute(x, [ndims(x)+1 1:ndims(x)]);
-    idx = repmat({':'}, ndims(x)-1,1);
+    % Initialize some arrays for vectorization    
+    x   = permute(x, [ndx+1 1:ndx]);
+    idx = repmat({':'}, ndx,1);
     m   = (0:n).';
     sqx = 1 - x.^2;
-
+    
+    % Special case; MATLAB does not normally reshape the Pnm vector 
+    % for size(x) = 1×p     
+    if szX(1)==1 && ndx == 2
+        Pnm = permute(Pnm, [1 3 2]); end
+    
     % Normalization factors: this is actually a nice puzzle :)
     F = -ones(n+1,1);
     if ~strcmpi(normalization,'unnorm')
