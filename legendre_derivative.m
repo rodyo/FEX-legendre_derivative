@@ -55,11 +55,15 @@ function dPnmdx = legendre_derivative(varargin)
     %% Initialization 
 
     % Parse input, do some checks
-    error(nargchk(2, 4, nargin, 'struct'));
+    if verLessThan('MATLAB', '7.3')
+        error(nargchk(2, 4, nargin, 'struct')); %#ok<*NCHKN>
+    else
+        narginchk(2,4);
+    end
 
     n = varargin{1};
     varargin = varargin(2:end);
-    assert(isnumeric(n) && isscalar(n) && isfinite(n) && isreal(n) && round(n)==n && n>0,...
+    assert(isnumeric(n) && isscalar(n) && isfinite(n) && isreal(n) && round(n)==n && n>=0,...
           [mfilename ':invalid_n'],...
           'Degree N must be a positive integer.');
 
@@ -101,9 +105,14 @@ function dPnmdx = legendre_derivative(varargin)
            (szX(1) == 1 && ndx == 2 && szX(2) ~= 1 && szPnm(2)==szX(2)),...
            [mfilename  ':Pnm_dimension_mismatch'],...
            'Dimensions of polynomial values Pnm disagrees with vector x.');
-              
-       
+                     
     %% Computation 
+    
+    % n==0 case
+    if numel(Pnm)==1
+        dPnmdx = zeros(size(x)); 
+        return; 
+    end    
 
     % Initialize some arrays for vectorization    
     x   = permute(x, [ndx+1 1:ndx]);
@@ -128,25 +137,56 @@ function dPnmdx = legendre_derivative(varargin)
         end
 
         %... save for the first few entries
-        switch normalization
-            case 'norm'
-                F(1) = 1/F(2);
-            case 'sch'
-                F(1) = 1/2/F(2);
-                F(2) = 1/F(1);
+        if numel(F)>1
+            switch normalization
+                case 'norm'
+                    F(1) = 1/F(2);
+                case 'sch'
+                    F(1) = 1/2/F(2);
+                    F(2) = 1/F(1);
+            end
         end
 
         F = sqrt(F);
 
-    end
-
+    end    
+    
     % Compute derivative, vectorized, efficient.
-    % Sadly, this means it's unreadable.
+    % Sadly, that means it's unreadable.
     dPnmdx = bsxfun(@rdivide, Pnm .* bsxfun(@times, m, x) - ...
                                      bsxfun(@times, F, ...
-                                                    [-Pnm(2,idx{:})/n/(n+1)
-                                                     +Pnm(1:end-1,idx{:})]...
-                                           ) .*  ...
+                                            [-Pnm(2,idx{:})/n/(n+1)
+                                            +Pnm(1:end-1,idx{:})]...
+                                     ) .*  ...
                               bsxfun(@times, (n+m).*(n-m+1), sqrt(sqx)), ...
                     sqx);
+                
+    % Handle edge cases
+	ispolar = abs(x)==1;
+    if any(ispolar)
+        
+        xp  = x(ispolar);
+        pwr = +xp.^(1+n);
+        
+        dPnmdx(4:end,ispolar) = 0;
+        
+        switch normalization
+            case 'norm'   
+                dPnmdx(1,ispolar) = +pwr .* Pnm(1,:) .* n*(n+1)/2;
+                dPnmdx(2,ispolar) = -xp.*pwr*inf;
+                % TODO: 3 = "engineered", not actually derived...
+                dPnmdx(3,ispolar) = -pwr.* sqrt(n*(n+1)/(F(3)+4))*abs(Pnm(1))*F(1)/2;
+                
+            case 'sch'
+                dPnmdx(1,ispolar) = +pwr .* n*(n+1)/2;
+                dPnmdx(2,ispolar) = -xp.*pwr*inf;
+                dPnmdx(3,ispolar) = -pwr .* sqrt(n*(n+1)/8)/F(3);
+                                
+            otherwise
+                dPnmdx(1,ispolar) = +pwr .* n*(n+1)/2;                
+                dPnmdx(2,ispolar) = +xp.*pwr*inf;                
+                dPnmdx(3,ispolar) = -pwr * (n-1)*n*(n+1)*(n+2)/4;
+        end
+    end
+    
 end
