@@ -175,17 +175,20 @@ function dPnmdx = legendre_derivative(varargin)
                 dPnmdx(1,ispolar) = +pwr .* Pnm(1,:) .* n*(n+1)/2;
                 dPnmdx(2,ispolar) = -xp.*pwr*inf;
                 % TODO: 3 = "engineered", not actually derived...
-                dPnmdx(3,ispolar) = -pwr.* sqrt(n*(n+1)/(F(3)+4))*abs(Pnm(1))*F(1)/2;
+                if n > 1
+                    dPnmdx(3,ispolar) = -pwr.* sqrt(n*(n+1)/(F(3)+4))*abs(Pnm(1))*F(1)/2; end
                 
             case 'sch'
                 dPnmdx(1,ispolar) = +pwr .* n*(n+1)/2;
                 dPnmdx(2,ispolar) = -xp.*pwr*inf;
-                dPnmdx(3,ispolar) = -pwr .* sqrt(n*(n+1)/8)/F(3);
+                if n > 1
+                    dPnmdx(3,ispolar) = -pwr .* sqrt(n*(n+1)/8)/F(3); end
                                 
             otherwise
                 dPnmdx(1,ispolar) = +pwr .* n*(n+1)/2;                
-                dPnmdx(2,ispolar) = +xp.*pwr*inf;                
-                dPnmdx(3,ispolar) = -pwr * (n-1)*n*(n+1)*(n+2)/4;
+                dPnmdx(2,ispolar) = +xp.*pwr*inf;       
+                if n > 1
+                    dPnmdx(3,ispolar) = -pwr * (n-1)*n*(n+1)*(n+2)/4; end
         end
     end
     
