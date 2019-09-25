@@ -49,8 +49,11 @@
 % See also legendre.
 function dPnmdx = legendre_derivative(varargin)
 
-    % If you find this work useful, please consider a donation:
-    % https://www.paypal.me/RodyO/3.5
+% Please report bugs and inquiries to the author: 
+%
+% Name   : Rody P.S. Oldenhuis
+% E-mail : oldenhuis@gmail.com  
+% Licence: 3-clause BSD
     
     %% Initialization 
 
@@ -65,7 +68,7 @@ function dPnmdx = legendre_derivative(varargin)
     varargin = varargin(2:end);
     assert(isnumeric(n) && isscalar(n) && isfinite(n) && isreal(n) && round(n)==n && n>=0,...
           [mfilename ':invalid_n'],...
-          'Degree N must be a positive integer.');
+          'Degree N must be a positive scalar integer.');
 
     normalization = 'unnorm';
     if ischar(varargin{end})
@@ -81,7 +84,7 @@ function dPnmdx = legendre_derivative(varargin)
     varargin(end) = [];
     
     assert(~isempty(x) && isnumeric(x) && ...
-           all(isreal(x(:))) && all(abs(x(~isnan(x(:))))) <= 1,...
+           all(isreal(x(:))) && all(abs(x(~isnan(x(:)))) <= 1),...
            [mfilename ':invalid_x'],...
            'X must be real, numeric, nonempty, and in the range (-1,1).');
     
@@ -156,7 +159,7 @@ function dPnmdx = legendre_derivative(varargin)
     dPnmdx = bsxfun(@rdivide, Pnm .* bsxfun(@times, m, x) - ...
                                      bsxfun(@times, F, ...
                                             [-Pnm(2,idx{:})/n/(n+1)
-                                            +Pnm(1:end-1,idx{:})]...
+                                             +Pnm(1:end-1,idx{:})]...
                                      ) .*  ...
                               bsxfun(@times, (n+m).*(n-m+1), sqrt(sqx)), ...
                     sqx);
@@ -171,10 +174,10 @@ function dPnmdx = legendre_derivative(varargin)
         dPnmdx(4:end,ispolar) = 0;
         
         switch normalization
+            
             case 'norm'   
-                dPnmdx(1,ispolar) = +pwr .* Pnm(1,:) .* n*(n+1)/2;
-                dPnmdx(2,ispolar) = -xp.*pwr*inf;
-                % TODO: 3 = "engineered", not actually derived...
+                dPnmdx(1,ispolar) = +xp.*pwr .* Pnm(1,:) .* n*(n+1)/2;
+                dPnmdx(2,ispolar) = -xp.*pwr  * inf;                
                 if n > 1
                     dPnmdx(3,ispolar) = -pwr.* sqrt(n*(n+1)/(F(3)+4))*abs(Pnm(1))*F(1)/2; end
                 
